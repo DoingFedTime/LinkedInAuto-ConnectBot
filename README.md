@@ -1,108 +1,235 @@
-# 🤖 LinkedIn Auto-Connect Bot
+<h1 align="center">
+    🤖 LinkedIn Auto-Connect Bot
+</h1>
 
-Automate your LinkedIn networking like a pro! This lightweight script helps you send connection requests on autopilot—all within your browser. 🚀
-NO DOWNLOAD NEEDED!
-⭐ if this helped.
+<p align="center">
+    <img src="https://img.shields.io/github/license/NatsumeAoii/Linkedinauto-connectbot?style=flat-square">
+    <img src="https://img.shields.io/github/stars/NatsumeAoii/Linkedinauto-connectbot?style=flat-square">
+</p>
 
----
-
-## 🎥 Demo
-
-![🤖 LinkedIn Auto-Connect Bot](https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExaGRncGRhY2xreXJhYmV4enVyZzhoY3l5OXpuemI5NGwxMXpjaTI4ayZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/JKunsuORznBN40VawJ/giphy.gif)
-
-
-
-## 🔥 What This Bot Does
-
-This script eliminates repetitive manual tasks by:
-- **Automatically clicking "Connect"** on target profiles.
-- **Sending requests without notes** for speed and simplicity.
-- **Navigating to the next page** when the current one is complete.
-- Repeating the process until stopped or when no more connections are available.
+Supercharge your LinkedIn networking with precision and automation!  
+This lightweight, browser-based script takes the hassle out of sending connection requests. 🚀  
+No downloads. No installations. Just seamless networking.  
+**⭐ If you find this helpful, don’t forget to star this repo!**
 
 ---
 
-## 🛠️ Prerequisites
+## 🎥 Demo in Action
+
+<p align="center">
+  <img src="https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExaGRncGRhY2xreXJhYmV4enVyZzhoY3l5OXpuemI5NGwxMXpjaTI4ayZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/JKunsuORznBN40VawJ/giphy.gif" alt="LinkedIn Auto-Connect Bot Demo" width="800" height="auto">
+</p>
+
+---
+
+## 🔥 Key Features
+
+- **One-click automation** for sending connection requests on LinkedIn.
+- Intelligent navigation to handle multiple pages seamlessly.
+- Built-in checks to detect and stop when LinkedIn's **weekly invitation limits** are reached.
+- Fully customizable—tailor it to your specific networking goals.
+- Supports both **English** and **Indonesian** LinkedIn interfaces.
+
+---
+
+## 🛠️ What You Need
 
 - A LinkedIn account
-- A browser
-- IQ north of 60
+- A browser with developer tools (e.g., Chrome, Firefox)
+
 ---
 
-## 📋 How to Use
+## 📋 How to Set It Up
 
-1. **Go to LinkedIn** and search for your desired audience (e.g., “Data Scientists,” “Product Managers”).
-2. **Open Chrome Developer Tools**:
-   - Press `F12` or right-click the page and select **Inspect**.
-3. Navigate to the **Console Tab**.
-4. **Copy and paste the following script** into the console:
+1. Log in to your LinkedIn account and search for your target audience (e.g., “Software Engineers”, “Marketers”, “HR”, “HRD”).
+2. On the search results page, **click the "See all people results"** button to view the full list of profiles.
+3. **If you're using Chrome, make sure to use a fresh profile** (not your main one) to avoid interference from browser extensions.
+   - To create a new profile: Go to **Settings > Manage profiles > Add new profile**.
+4. Open **Developer Tools** (press `F12` or right-click the page → **Inspect**).
+5. Navigate to the **Console Tab**.
+6. Type **`allow pasting`**, then hit `Enter`. This will allow you to paste scripts into the console.
+7. Copy and paste the script into the console.
 
 ```javascript
 async function linkedInBot() {
-    const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  const log = (message) => console.log(`[LOG] ${message}`);
 
-    for (let i = 0; i < 1000; i++) {
-        try {
-            const connectButton = document.querySelector('button[aria-label*="Invite"][aria-label*="connect"]');
-            if (connectButton) {
-                connectButton.click();
-                await sleep(1500);
-                const sendButton = document.querySelector('button[aria-label="Send without a note"]');
-                if (sendButton) {
-                    sendButton.click();
-                    await sleep(1500);
-                }
-            } else {
-                const nextButton = document.querySelector('button[aria-label="Next"]');
-                if (nextButton) {
-                    nextButton.click();
-                    await sleep(3000);
-                    console.log("Moving to the next page...");
-                } else {
-                    console.log("No more connections available.");
-                    break;
-                }
-            }
-        } catch (error) {
-            console.error("An error occurred:", error);
-        }
+  // Configurator: Set your preferences here
+  const useConnect = true; // Set to true to use "Connect / Hubungkan"
+  const useInvite = true; // Set to true to use "Follow / Ikuti"
+  const waitTimeBetweenActions = 1500; // Configurable wait time in milliseconds
+  const waitTimeBetweenPages = 3000; // Configurable wait time between page navigation
+
+  // BELOW THIS WAS THE LOGIC, IF YOU WANT TO MAKE SOME CHANGES, MAKE SURE YOU KNOW WHAT YOU WERE DOING.
+
+  let connectLimitReached = false;
+
+  const clickButton = async (ariaLabels, partialMatch = false) => {
+    try {
+      const button = Array.isArray(ariaLabels)
+        ? Array.from(document.querySelectorAll('button')).find((btn) =>
+            ariaLabels.some((label) => btn.getAttribute('aria-label')?.includes(label))
+          )
+        : partialMatch
+        ? Array.from(document.querySelectorAll('button')).find((btn) => btn.getAttribute('aria-label')?.includes(ariaLabels))
+        : document.querySelector(`button[aria-label="${ariaLabels}"]`);
+
+      if (button) {
+        button.click();
+        log(`Clicked button: "${button.getAttribute('aria-label')}"`);
+        await sleep(waitTimeBetweenActions);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      log(`Error clicking button: "${ariaLabels}" - ${error.message}`);
+      return false;
     }
+  };
+
+  const handleWeeklyLimitPopup = async () => {
+    try {
+      const popupHeader = document.querySelector('#ip-fuse-limit-alert__header');
+      if (popupHeader) {
+        if (
+          popupHeader.textContent.includes("Anda telah mencapai batas mingguan pengiriman undangan") || 
+          popupHeader.textContent.includes("You’ve reached the weekly invitation limit")
+        ) {
+          log("Weekly invitation limit popup detected.");
+          const gotItButtonLabels = ["Got it", "Mengerti"]; 
+          await clickButton(gotItButtonLabels);
+          connectLimitReached = true;
+          return true;
+        }
+      }
+      return false;
+    } catch (error) {
+      log(`Error handling weekly limit popup: ${error.message}`);
+      return false;
+    }
+  };
+
+  const checkDisabledNextButton = () => {
+    const disabledNextButtons = [
+      document.querySelector('button[disabled][aria-label="Next"]'),
+      document.querySelector('button[disabled][aria-label="Berikutnya"]')
+    ];
+    if (disabledNextButtons.some((button) => button !== null)) {
+      log("Disabled 'Next' button found. Stopping the bot...");
+      return true;
+    }
+    return false;
+  };
+
+  for (let i = 0; ; i++) {
+    try {
+      log(`Attempt ${i + 1} - Searching for connections...`);
+
+      if (await handleWeeklyLimitPopup()) {
+        log("Handled weekly invitation limit popup. Continuing...");
+      }
+
+      let actionPerformed = false;
+
+      if (useConnect && !connectLimitReached) {
+        const connectLabels = ["connect", "Hubungkan"];
+        const connected = await clickButton(connectLabels, true);
+        if (connected) {
+          const sendInvitationLabels = ["Send invitation", "Kirim undangan"];
+          await clickButton(sendInvitationLabels);
+          actionPerformed = true;
+        } else if (await handleWeeklyLimitPopup()) {
+          connectLimitReached = true;
+        }
+      }
+
+      if (useInvite && (!useConnect || connectLimitReached) && !actionPerformed) {
+        const inviteLabels = ["Follow", "Ikuti"];
+        const invited = await clickButton(inviteLabels, true);
+      }
+
+      if (checkDisabledNextButton()) {
+        break;
+      }
+
+      const nextLabels = ["Next", "Berikutnya"];
+      const movedNext = await clickButton(nextLabels);
+      if (!movedNext) {
+        log("No 'Next' button found. Retrying...");
+        await sleep(waitTimeBetweenPages);
+      } else {
+        await sleep(waitTimeBetweenPages);
+        log("Moved to the next page...");
+      }
+    } catch (error) {
+      log(`An error occurred during execution: ${error.message}`);
+    }
+  }
+
+  log("LinkedIn Bot execution completed.");
 }
 
 linkedInBot();
 ```
-To stop it refresh the page (hit F5). 
 
-## ⚠️ Important Notes
+8. Press `Enter` to start networking.
 
-- Use responsibly and follow LinkedIn's **Terms of Service**.
-- Be aware of LinkedIn's **daily connection request limits**—don’t overuse the tool.
-- Adding **personalized notes** to connection requests can improve acceptance rates.
-- This tool is provided for **educational purposes only**.
+--- 
 
----
-
-## ⭐ Pro Tips for Success
-
-- **Refine your search results** to target specific, relevant connections.
-- Take **breaks** between automation sessions to reduce the risk of detection.
-- Regularly **review and manage your pending requests** to avoid exceeding limits.
-- Adjust the `sleep` timings in the script for a more natural, human-like behavior.
+> [!IMPORTANT]
+> To stop the script, just refresh the page.
 
 ---
 
-## 🚫 Disclaimer
+## ⚠️ Important Reminders
 
-This tool is designed for **educational purposes only**.  
-By using this script, you accept full responsibility for any risks, including account restrictions.  
-The creator is not liable for any consequences resulting from misuse of this tool.
+- This script is **not officially supported by LinkedIn**, so use it responsibly.
+- Be mindful of LinkedIn’s **daily/weekly connection request limits** to avoid detection.
+- **Adding personalized messages** to connection requests can significantly boost acceptance rates.
 
 ---
 
-## 🌟 Found this Useful?
+## ⭐ Pro Tips for Power Users
 
-Give this repo a [⭐](https://github.com/DoingFedTime/LinkedInAuto-ConnectBot/stargazers) to show your support!
+1. **Fine-tune sleep timings** to mimic human behavior (e.g., randomize delays).
+2. **Target strategically:** Narrow your search filters for more relevant connections.
+3. **Manage your pending invites:** Clean up unaccepted requests regularly.
+4. Break sessions into **short intervals** to avoid triggering spam flags.
 
-Follow me on [LinkedIn](https://www.linkedin.com/in/sam-bent/), [Twitter/X](https://twitter.com/DoingFedTime), [Instagram](https://www.instagram.com/sambentoffical/), [YouTube](https://youtube.com/@sam_bent), and [Rumble](https://rumble.com/c/DoingFedTime) for more tips and tricks on automation and productivity. Visit my [website](https://www.sambent.com) for additional resources.
+---
 
-Happy networking! 🎯
+## 🚫 Legal Disclaimer
+
+This tool is intended for **educational purposes only**.  
+By using it, you agree to take full responsibility for any risks, including potential account restrictions.  
+The creator assumes no liability for misuse.
+
+---
+
+## 🌟 Like This? Show Some Love!
+
+If you found this project helpful, show your support:
+
+- ⭐ **Star this repo** to spread the word and support the project!
+- Connect with us and follow for more tips, tools, and updates:
+
+### 📌 Owner:
+- [LinkedIn](https://www.linkedin.com/in/sam-bent/)
+- [Twitter/X](https://twitter.com/DoingFedTime)
+- [Instagram](https://www.instagram.com/sambentoffical/)
+- [YouTube](https://youtube.com/@sam_bent)
+- [Rumble](https://rumble.com/c/DoingFedTime)
+- Explore more automation ideas on my [website](https://www.sambent.com).
+
+### 📌 Collaborator:
+- [LinkedIn](https://www.linkedin.com/in/wardanadwimulia/)
+- [Instagram](https://www.instagram.com/tulisajaudah/)
+
+---
+
+### What Changed:
+1. **Language Support**: Included a language `English` and `Indonesia` for broader accessibility.
+2. **Improved Key Features Section**: Updated the "What This Bot Does" section with a concise, bullet-point breakdown of features, renamed it "Key Features," and highlighted the bot's built-in checks for LinkedIn limits.
+3. **Code Improvements**: Updated the script to handle LinkedIn invitation limits gracefully with a clearer logic flow and logging system.
+4. **Pro Tips for Power Users**: Expanded actionable advice for maximizing the script's effectiveness and minimizing risks.
