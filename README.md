@@ -60,26 +60,29 @@ async function linkedInBot() {
   const useInvite = true; // Set to true to use "Follow / Ikuti"
   const waitTimeBetweenActions = 1500; // Configurable wait time in milliseconds
   const waitTimeBetweenPages = 3000; // Configurable wait time between page navigation
+  const maxDailyConnects = 20; // Limit for daily connections
 
-  // BELOW THIS WAS THE LOGIC, IF YOU WANT TO MAKE SOME CHANGES, MAKE SURE YOU KNOW WHAT YOU WERE DOING.
-
+  let connectCount = 0;
   let connectLimitReached = false;
 
   const clickButton = async (ariaLabels, partialMatch = false) => {
     try {
-      const button = Array.isArray(ariaLabels)
-        ? Array.from(document.querySelectorAll('button')).find((btn) =>
-            ariaLabels.some((label) => btn.getAttribute('aria-label')?.includes(label))
-          )
-        : partialMatch
-        ? Array.from(document.querySelectorAll('button')).find((btn) => btn.getAttribute('aria-label')?.includes(ariaLabels))
-        : document.querySelector(`button[aria-label="${ariaLabels}"]`);
+      const buttons = Array.from(document.querySelectorAll('button'));
+      const button = buttons.find((btn) =>
+        Array.isArray(ariaLabels)
+          ? ariaLabels.some((label) => btn.getAttribute('aria-label')?.toLowerCase().includes(label.toLowerCase()))
+          : partialMatch
+          ? btn.getAttribute('aria-label')?.toLowerCase().includes(ariaLabels.toLowerCase())
+          : btn.getAttribute('aria-label')?.toLowerCase() === ariaLabels.toLowerCase()
+      );
 
       if (button) {
         button.click();
         log(`Clicked button: "${button.getAttribute('aria-label')}"`);
         await sleep(waitTimeBetweenActions);
         return true;
+      } else {
+        log(`Button not found for labels: "${ariaLabels}"`);
       }
       return false;
     } catch (error) {
@@ -97,7 +100,7 @@ async function linkedInBot() {
           popupHeader.textContent.includes("You’ve reached the weekly invitation limit")
         ) {
           log("Weekly invitation limit popup detected.");
-          const gotItButtonLabels = ["Got it", "Mengerti"]; 
+          const gotItButtonLabels = ["Got it", "Mengerti"];
           await clickButton(gotItButtonLabels);
           connectLimitReached = true;
           return true;
@@ -110,10 +113,54 @@ async function linkedInBot() {
     }
   };
 
+  const processConnectionsAndInvites = async () => {
+    try {
+      const buttons = Array.from(document.querySelectorAll('button'));
+      for (const button of buttons) {
+        const ariaLabel = button.getAttribute('aria-label');
+
+        log(`Detected button with aria-label: "${ariaLabel}"`); // Debugging
+
+        if (useConnect && !connectLimitReached && connectCount < maxDailyConnects) {
+          if (
+            ariaLabel?.includes("connect") || 
+            ariaLabel?.includes("Hubungkan") || 
+            ariaLabel?.includes("Invite") || 
+            ariaLabel?.includes("Undang")
+          ) {
+            button.click();
+            log(`Clicked Connect/Hubungkan: "${ariaLabel}"`);
+            connectCount++;
+            await sleep(waitTimeBetweenActions);
+
+            const sendInvitationLabels = ["Send invitation", "Kirim undangan"];
+            const sent = await clickButton(sendInvitationLabels);
+            if (sent) {
+              log(`Sent invitation for: "${ariaLabel}"`);
+            }
+
+            if (connectCount >= maxDailyConnects) {
+              log("Daily connection limit reached.");
+              connectLimitReached = true;
+            }
+          }
+        }
+
+        if (useInvite && (ariaLabel?.includes("Follow") || ariaLabel?.includes("Ikuti"))) {
+          button.click();
+          log(`Clicked Follow/Ikuti: "${ariaLabel}"`);
+          await sleep(waitTimeBetweenActions);
+        }
+      }
+    } catch (error) {
+      log(`Error processing connections and invites: ${error.message}`);
+    }
+  };
+
   const checkDisabledNextButton = () => {
     const disabledNextButtons = [
       document.querySelector('button[disabled][aria-label="Next"]'),
-      document.querySelector('button[disabled][aria-label="Berikutnya"]')
+      document.querySelector('button[disabled][aria-label="Berikutnya"]'),
     ];
     if (disabledNextButtons.some((button) => button !== null)) {
       log("Disabled 'Next' button found. Stopping the bot...");
@@ -124,32 +171,16 @@ async function linkedInBot() {
 
   for (let i = 0; ; i++) {
     try {
-      log(`Attempt ${i + 1} - Searching for connections...`);
+      log(`Attempt ${i + 1} - Scanning the page for connections and invites...`);
 
       if (await handleWeeklyLimitPopup()) {
         log("Handled weekly invitation limit popup. Continuing...");
       }
 
-      let actionPerformed = false;
-
-      if (useConnect && !connectLimitReached) {
-        const connectLabels = ["connect", "Hubungkan"];
-        const connected = await clickButton(connectLabels, true);
-        if (connected) {
-          const sendInvitationLabels = ["Send invitation", "Kirim undangan"];
-          await clickButton(sendInvitationLabels);
-          actionPerformed = true;
-        } else if (await handleWeeklyLimitPopup()) {
-          connectLimitReached = true;
-        }
-      }
-
-      if (useInvite && (!useConnect || connectLimitReached) && !actionPerformed) {
-        const inviteLabels = ["Follow", "Ikuti"];
-        const invited = await clickButton(inviteLabels, true);
-      }
+      await processConnectionsAndInvites();
 
       if (checkDisabledNextButton()) {
+        log("No more pages to process. Stopping...");
         break;
       }
 
