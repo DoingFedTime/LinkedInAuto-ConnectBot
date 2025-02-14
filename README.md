@@ -16,6 +16,7 @@ NO DOWNLOAD NEEDED!
 
 This script eliminates repetitive manual tasks by:
 - **Automatically clicking "Connect"** on target profiles.
+- **Automatically clicking "Follow"** on target profiles.
 - **Sending requests without notes** for speed and simplicity.
 - **Navigating to the next page** when the current one is complete.
 - Repeating the process until stopped or when no more connections are available.
@@ -43,6 +44,12 @@ async function linkedInBot() {
 
     for (let i = 0; i < 1000; i++) {
         try {
+            const followButton = document.querySelector('button[aria-label*="Follow "]');
+            if (followButton){
+                followButton.click();
+                await sleep(1500);
+            }
+
             const connectButton = document.querySelector('button[aria-label*="Invite"][aria-label*="connect"]');
             if (connectButton) {
                 connectButton.click();
