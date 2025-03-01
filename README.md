@@ -4,6 +4,31 @@ Automate your LinkedIn networking like a pro! This lightweight script helps you 
 NO DOWNLOAD NEEDED!
 ⭐ if this helped.
 
+## LinkedIn Auto-Connect Bot Changelog
+
+## Version 1.0.0 (2025-03-01)
+
+### Added
+- Initial bot implementation with basic "Connect" button clicking
+- Support for multiple connection flows:
+  - Direct "Connect" button flow
+  - "Message → More → Connect" flow
+  - "Profile visit → More → Connect" flow
+- Smart profile tracking to prevent processing the same profile multiple times
+- Automatic handling of premium popups and modals
+- Navigation between search result pages
+- Error recovery mechanisms with automatic return to search results
+- Random timing delays to appear more human-like
+- Comprehensive logging of actions for easier debugging
+- Handling for "Add a note" modals with automatic dismissal
+
+### Technical Improvements
+- Robust element selection using aria-labels and content targeting
+- Profile identification across different LinkedIn UI layouts
+- Smart scrolling to load more results before pagination
+- Browser history management for reliable navigation
+- Graceful error handling with multiple fallback mechanisms
+
 ---
 
 ## 🎥 Demo
